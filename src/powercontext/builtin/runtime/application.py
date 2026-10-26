@@ -437,6 +437,16 @@ class _RuntimeConfigurationError(ValueError):
         super().__init__(f"{field} must be positive")
 
 
+def _validate_count_threshold(field: str, value: int | None) -> int | None:
+    """Accept only a strict positive integer or ``None`` for a count threshold."""
+
+    if value is None:
+        return None
+    if type(value) is not int or value < 1:
+        raise _RuntimeConfigurationError(field)
+    return value
+
+
 class _RuntimeStateError(RuntimeError):
     def __init__(self, code: str) -> None:
         messages = {
@@ -488,6 +498,7 @@ class ScopedSourceApplication:
                             span.set_attributes({_MEMORY_CAPTURE_SOURCE_COUNT: 1})
             except BaseValueConflictError as error:
                 raise SourceConflictError("identity", error.identity) from None
+            self._runtime._notify_source_capture(self.scope_id)
             return SourceReceipt(
                 source_ref=SourceRef(source_type=record.source_type, source_id=record.source_id),
                 sequence=record.position,
@@ -504,7 +515,9 @@ class ScopedSourceApplication:
                 )
                 if span is not None:
                     span.set_attributes({_MEMORY_CAPTURE_SOURCE_COUNT: 1})
-            return SourceReceipt(source_ref=context.sources.catalog.as_ref(source), sequence=sequence)
+                receipt = SourceReceipt(source_ref=context.sources.catalog.as_ref(source), sequence=sequence)
+        self._runtime._notify_source_capture(self.scope_id)
+        return receipt
 
 
 class SourceApplication:
@@ -563,7 +576,9 @@ class ScopedRecordApplication:
         /,
     ) -> ArtifactCreated:
         async with self._runtime._scope_operation(self.scope_id), self._runtime._locked(self.scope_id):
-            return await self._runtime._records().create_artifact(self.scope_id, family, write)
+            created = await self._runtime._records().create_artifact(self.scope_id, family, write)
+        self._runtime._notify_source_capture(self.scope_id)
+        return created
 
     async def get_artifact(self, family: str, artifact_id: str, /) -> ArtifactRecord:
         async with self._runtime._scope_operation(self.scope_id):
@@ -3008,6 +3023,8 @@ class BuiltinRuntime:
         capabilities: RuntimeCapabilities,
         code_service: CodeService | None = None,
         source_window_limit: int = 100,
+        memory_source_count_threshold: int | None = None,
+        topic_memory_source_count_threshold: int | None = None,
         context_assembly_max_entries: int = 8,
         recall_sufficiency_policy: RecallSufficiencyPolicy | None = None,
         scope_cache_size: int = DEFAULT_SCOPE_CACHE_SIZE,
@@ -3112,6 +3129,14 @@ class BuiltinRuntime:
         self._scheduled_source_runner = scheduled_source_runner
         self._scheduled_experience_runner = scheduled_experience_runner
         self.source_window_limit = source_window_limit
+        self._memory_source_count_threshold = _validate_count_threshold(
+            "memory_source_count_threshold", memory_source_count_threshold
+        )
+        self._topic_memory_source_count_threshold = _validate_count_threshold(
+            "topic_memory_source_count_threshold", topic_memory_source_count_threshold
+        )
+        self._count_lock = asyncio.Lock()
+        self._count_tasks: set[asyncio.Task[None]] = set()
         self.context_assembly_max_entries = context_assembly_max_entries
         self.recall_sufficiency_policy = recall_sufficiency_policy
         self._scope_cache = ScopeCache(
@@ -3151,6 +3176,43 @@ class BuiltinRuntime:
         self.experience_processor = (
             None if scope_ids is None or experience_incubator is None else ScheduledExperienceProcessor(self, scope_ids)
         )
+
+    async def _pending_source_count(self, scope_id: str, /) -> int:
+        """Count journal identities past the Memory trigger's successful cursor."""
+
+        async with self._context(scope_id) as context:
+            cursor = await context.triggers.cursor()
+            entries = await context.sources.journal.entries()
+        return sum(1 for entry in entries if entry.position > cursor.sequence)
+
+    def _notify_source_capture(self, scope_id: str, /) -> None:
+        """Start a background count check after one durable capture."""
+
+        threshold = self._memory_source_count_threshold
+        if threshold is None or self._closing or self._closed:
+            return
+        try:
+            task = asyncio.create_task(self._drain_memory_threshold(scope_id, threshold))
+        except RuntimeError:
+            return
+        self._count_tasks.add(task)
+        task.add_done_callback(self._count_tasks.discard)
+
+    async def _drain_memory_threshold(self, scope_id: str, threshold: int, /) -> None:
+        """Process one window at a time while the pending count still qualifies."""
+
+        async with self._count_lock:
+            while not self._closing and not self._closed:
+                try:
+                    if await self._pending_source_count(scope_id) < threshold:
+                        return
+                    result = await self.memory.for_scope(scope_id).flush()
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    return
+                if not result.processed:
+                    return
 
     async def __aenter__(self) -> BuiltinRuntime:
         return self
