@@ -470,22 +470,24 @@ class OceanBaseMemoryVectorIndex:
             raise CapabilityNotSupportedError("embedding-profile")
         if not await self.vector_complete(connection, scope_id, request.memories, self.profile):
             raise CapabilityNotSupportedError("vector")
-        rows = (
-            await connection.execute(
-                self._hybrid_search_sql if request.tag_filter is None else self._tagged_hybrid_search_sql,
-                {
-                    "scope_id": scope_id,
-                    "memory_artifact_ids": tuple(memory.artifact_id for memory in request.memories),
-                    "analyzed_query": request.analyzed_query,
-                    "query_vector": validate_embedding(
-                        request.query_vector,
-                        dimension=self.profile.dimension,
-                    ),
-                    "candidate_limit": request.candidate_limit,
-                    **memory_tag_parameters(request.tag_filter),
-                },
-            )
-        ).mappings()
+        rows = list(
+            (
+                await connection.execute(
+                    self._hybrid_search_sql if request.tag_filter is None else self._tagged_hybrid_search_sql,
+                    {
+                        "scope_id": scope_id,
+                        "memory_artifact_ids": tuple(memory.artifact_id for memory in request.memories),
+                        "analyzed_query": request.analyzed_query,
+                        "query_vector": validate_embedding(
+                            request.query_vector,
+                            dimension=self.profile.dimension,
+                        ),
+                        "candidate_limit": request.candidate_limit,
+                        **memory_tag_parameters(request.tag_filter),
+                    },
+                )
+            ).mappings()
+        )
         fts_rows = [row for row in rows if str(row["channel"]) == "fts"]
         vector_rows = [row for row in rows if str(row["channel"]) == "vector"]
         if os.environ.get("PC_DEBUG_HYBRID"):
