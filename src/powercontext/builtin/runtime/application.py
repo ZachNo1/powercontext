@@ -3173,26 +3173,52 @@ class BuiltinRuntime:
         self.handoff_report: HandoffReportApplication | None = None
         self.artifact_processing_supervisor: ArtifactProcessingSupervisors | None = None
         self.processor = None if scope_ids is None else ScheduledSourceProcessor(self, scope_ids)
+        self._scope_ids = scope_ids
         self.experience_processor = (
             None if scope_ids is None or experience_incubator is None else ScheduledExperienceProcessor(self, scope_ids)
         )
 
     async def _pending_source_count(self, scope_id: str, /) -> int:
-        """Count journal identities past the Memory trigger's successful cursor."""
+        """Count journal identities past the Memory trigger's committed cursor."""
 
         async with self._context(scope_id) as context:
             cursor = await context.triggers.cursor()
             entries = await context.sources.journal.entries()
         return sum(1 for entry in entries if entry.position > cursor.sequence)
 
-    def _notify_source_capture(self, scope_id: str, /) -> None:
-        """Start a background count check after one durable capture."""
+    async def _topic_pending_source_count(self, scope_id: str, /) -> int:
+        """Count journal identities past the Topic Memory window cursor."""
 
-        threshold = self._memory_source_count_threshold
-        if threshold is None or self._closing or self._closed:
+        service = self.ingestion._service
+        if service is None:
+            return 0
+        from powercontext.builtin.artifacts.topic_memory import TOPIC_MEMORY_SOURCE_WINDOW_BINDING
+        from powercontext.builtin.persistence.cursors import SourceCursorRepository
+
+        async with service.database.transaction() as connection:
+            cursor = await SourceCursorRepository().load(
+                connection, scope_id, TOPIC_MEMORY_SOURCE_WINDOW_BINDING
+            )
+        async with self._context(scope_id) as context:
+            entries = await context.sources.journal.entries()
+        consumed = 0 if cursor is None else cursor.cursor.sequence
+        return sum(1 for entry in entries if entry.position > consumed)
+
+    def _notify_source_capture(self, scope_id: str, /) -> None:
+        """Start background count checks after one durable journal write."""
+
+        if self._closing or self._closed:
             return
+        memory_threshold = self._memory_source_count_threshold
+        if memory_threshold is not None:
+            self._spawn_count_task(self._drain_memory_threshold(scope_id, memory_threshold))
+        topic_threshold = self._topic_memory_source_count_threshold
+        if topic_threshold is not None:
+            self._spawn_count_task(self._drain_topic_threshold(scope_id, topic_threshold))
+
+    def _spawn_count_task(self, coroutine: Any, /) -> None:
         try:
-            task = asyncio.create_task(self._drain_memory_threshold(scope_id, threshold))
+            task = asyncio.create_task(coroutine)
         except RuntimeError:
             return
         self._count_tasks.add(task)
@@ -3214,7 +3240,41 @@ class BuiltinRuntime:
                 if not result.processed:
                     return
 
+    async def _drain_topic_threshold(self, scope_id: str, threshold: int, /) -> None:
+        """Accept one Topic Memory wave once the pending count qualifies.
+
+        An accepted wave keeps draining its own windows, so the threshold is not
+        applied again to the windows that wave still has to finish.
+        """
+
+        async with self._count_lock:
+            if self._closing or self._closed:
+                return
+            try:
+                if await self._topic_pending_source_count(scope_id) < threshold:
+                    return
+                await self.topic_memory.for_scope(scope_id).flush()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                return
+
+    async def _resume_count_thresholds(self, /) -> None:
+        """Re-check every known scope once the Runtime reopens."""
+
+        if self._scope_ids is None:
+            return
+        if self._memory_source_count_threshold is None and self._topic_memory_source_count_threshold is None:
+            return
+        try:
+            scope_ids = await self._scope_ids()
+        except Exception:
+            return
+        for scope_id in scope_ids:
+            self._notify_source_capture(scope_id)
+
     async def __aenter__(self) -> BuiltinRuntime:
+        await self._resume_count_thresholds()
         return self
 
     async def __aexit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
