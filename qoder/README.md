@@ -22,14 +22,22 @@
 
 ## 快速开始
 
-Windows 验证环境：Windows 11 26x00、Python 3.12，无 Docker、无 WSL、无 API Key。在仓库根目录的 `qoder/` 下执行（本机验证目录为 `D:\qoder\pc-repo\qoder`）：
+> ⚠️ 本项目仅在 Windows 11 + Python 3.12 实测；未验证 Linux/macOS。
+>
+> 下文命令为 Windows 形式（`.venv/Scripts/`），Linux/macOS 对应 `.venv/bin/`。
+
+Python >= 3.11（实测 3.12），无 Docker、无 WSL、无 API Key。在仓库的 `qoder/` 目录下执行（本机验证目录为 `D:\qoder\pc-repo\qoder`）：
 
 ```bat
 cd qoder
-uv venv --python 3.12 .venv
-uv pip install --python .venv/Scripts/python.exe -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-.venv/Scripts/python.exe app.py
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python.exe app.py
 ```
+
+国内网络建议追加镜像参数：`.venv\Scripts\pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple`（`requirements.txt` 本身不写镜像）。
+
+更快的安装方式（可选，需已安装 uv）：`uv venv --python 3.12 .venv` + `uv pip install --python .venv\Scripts\python.exe -r requirements.txt`。
 
 启动成功后会打印：
 
@@ -46,7 +54,7 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.txt -i https://
 
 按 Ctrl-C 退出：回收 PowerContext 子进程、释放 8000/8080（8001 未启用），并把 `data/server.json` 的 `running` 改写为 `false`。
 
-> 也可以用 `python -m venv .venv` 建标准 venv；本机 `python` 指向 Microsoft Store 别名，执行时提示 “Python was not found”，因此最终改用 uv 管理的解释器（`uv venv --python 3.12 .venv` 同样可用）。镜像只在安装命令里临时指定，`requirements.txt` 不含镜像地址。
+> 本机 `python` 指向 Microsoft Store 别名，执行 `python -m venv` 会提示 “Python was not found”，因此本机复现时改用 uv 管理的解释器创建 venv（`uv venv --python 3.12 .venv`）；在标准 Python 安装下，上面的主路径可直接执行。
 
 ## 验证样例
 
@@ -55,11 +63,12 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.txt -i https://
 - `samples/weekly_report.json`：干净运行的周报 JSON（10 条正文、8 次 prepare、`missing_bodies=0`、`trace` 与 events 完全一致）
 - `samples/events.jsonl`：同一次运行的 21 行调用记录（1 次 list 空库 + 10 次 remember + 1 次 list + 1 次 search + 8 次 prepare）
 
+首次运行（空库）trace 为 21 行，含 10 次 remember seeding；第二次起为 10 行（1 list + 1 search + 8 prepare）。`/evidence` 页的“调用明细（N 行）”与当次运行一致，`samples/` 里保存的是首次运行的 21 行版本。
+
 本次干净复现的实测记录：
 
 | 项目 | 结果 |
 | --- | --- |
-| 依赖安装（清华镜像，uv 缓存命中） | 4 s |
 | 依赖安装（PyPI 官方源，本机） | 超过 600 s 仍未完成，已终止 |
 | 首次冷启动（空 `data/`，首次建库） | 进程到页面 200：29.12 s；PowerContext 自身 22.15 s |
 | 第二次冷启动（空 `data/`，系统缓存已热） | 进程到页面 200：9.64 s；PowerContext 自身 4.82 s |
@@ -90,6 +99,12 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.txt -i https://
 - **依赖核对**：新装 venv 的 `uv pip freeze`（见 `req-lock.txt`）与探针 venv 的 `pip freeze` 逐包比对，122 个包版本完全一致；差异只有包名分隔符（如 `pydantic_core` / `pydantic-core`）与新 venv 自带的 `pip`。
 - **周报只在启动时生成一次**：修改 `seed/lab_memories.json` 或记忆后需重启 `app.py`，页面不做热更新。
 - **单人本地使用**：没有登录、权限与多用户隔离，服务只监听 `127.0.0.1`。
+
+## 参考与归属
+
+- 未直接复制官方示例或文档中的代码。端点、字段与返回结构以 PowerContext 1.4.0 的 `/openapi.json`、`/docs` 和本机实测响应为准。
+- 参考过官方仓库 `examples/jupyter/_tutorial.py` 的服务启动思路，最终实现改为 CLI 子进程 + HTTP 调用，未复用其代码。
+- `pc_client.py`、`app.py`、`evidence.py`、`scripts/`、`templates/` 与 `seed/` 均为本项目在 Qoder 中生成/改写的实现代码，未直接复制第三方代码；`seed/lab_memories.json` 为自拟示例数据。
 
 ## 开源归属
 
