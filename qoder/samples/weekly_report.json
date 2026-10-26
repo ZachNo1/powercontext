@@ -1,0 +1,496 @@
+{
+  "schema": "lab-weekly-report.draft.v1",
+  "generated_at": "2026-10-26T13:46:58+08:00",
+  "scope": {
+    "scope_id": "scp_60t3gqxzp0q46dk0ykj359tn77",
+    "title": "实验室周报助手",
+    "summary": "组会周报的长期上下文：本周进展、关键决定、风险约束与下周计划"
+  },
+  "powercontext": {
+    "base_url": "http://127.0.0.1:8000",
+    "port": 8000,
+    "home": "D:\\qoder\\workspace\\qoder\\data\\pc-home",
+    "database": "D:\\qoder\\workspace\\qoder\\data\\pc-home\\powercontext.db",
+    "server_reused": false,
+    "server_startup_ms": 4822.36
+  },
+  "focus": {
+    "topic": "我们上周为什么放弃方案B，梯度检查点是怎么替代它的？",
+    "query": "检查点 放弃",
+    "hits": [
+      {
+        "citation": "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1",
+        "kind": "decision",
+        "text": "决定放弃方案B，改用梯度检查点：全量激活缓存放不下，梯度检查点把峰值显存压到18G。",
+        "score": 0.01639344262295082
+      },
+      {
+        "citation": "atomic-memory/art_bbb354576c8747808b00d137ae544173@1",
+        "kind": "next-step",
+        "text": "下周把梯度检查点的开关做成命令行参数，方便组会现场对比显存曲线。",
+        "score": 0.016129032258064516
+      }
+    ]
+  },
+  "sections": [
+    {
+      "kind": "progress",
+      "title": "本周进展",
+      "prepare": {
+        "status": "ready",
+        "content_bytes": 916,
+        "latency_ms": 52.03,
+        "query": "本周 完成",
+        "items": 2
+      },
+      "items": [
+        {
+          "citation": "atomic-memory/art_2fe6db7d9b5545fd9721eca50a25523c@1",
+          "kind": "progress",
+          "text": "本周完成RAG评估脚本，跑通120条问答样本，检索命中率从61%提升到78%。",
+          "truncated": false,
+          "source": "section-prepare",
+          "source_query": "本周 完成"
+        },
+        {
+          "citation": "atomic-memory/art_43e043c282be4c35939402c475e690e9@1",
+          "kind": "progress",
+          "text": "整理了三篇长上下文论文的对比表，补充了显存占用和推理延迟两列。",
+          "truncated": false,
+          "source": "item-prepare",
+          "source_query": "整理 三篇"
+        },
+        {
+          "citation": "atomic-memory/art_4e074006114e487f95a1703ef146a22a@1",
+          "kind": "progress",
+          "text": "把实验日志迁移到 evidence 目录，每次运行自动记录 query 和 artifact 引用。",
+          "truncated": false,
+          "source": "item-prepare",
+          "source_query": "实验 日志"
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "关键决定",
+      "prepare": {
+        "status": "ready",
+        "content_bytes": 941,
+        "latency_ms": 48.33,
+        "query": "决定 方案",
+        "items": 2
+      },
+      "items": [
+        {
+          "citation": "atomic-memory/art_2c1ace65c270405b9a16a46797d12d68@1",
+          "kind": "decision",
+          "text": "组会决议：周报固定四段结构——本周进展、关键决定、风险待办、下周计划。",
+          "truncated": false,
+          "source": "section-prepare",
+          "source_query": "决定 方案"
+        },
+        {
+          "citation": "atomic-memory/art_b190d19d453940d1af435e148fb4ab70@1",
+          "kind": "decision",
+          "text": "确定评测基线使用 RAGAS 的三项指标，周会前不再更换评测集，避免历史结果不可比。",
+          "truncated": false,
+          "source": "item-prepare",
+          "source_query": "确定 评测"
+        },
+        {
+          "citation": "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1",
+          "kind": "decision",
+          "text": "决定放弃方案B，改用梯度检查点：全量激活缓存放不下，梯度检查点把峰值显存压到18G。",
+          "truncated": false,
+          "source": "section-prepare",
+          "source_query": "决定 方案"
+        }
+      ]
+    },
+    {
+      "kind": "constraint",
+      "title": "风险待办",
+      "prepare": {
+        "status": "ready",
+        "content_bytes": 1486,
+        "latency_ms": 55.35,
+        "query": "显存 上限",
+        "items": 4
+      },
+      "items": [
+        {
+          "citation": "atomic-memory/art_45caf57b5f3944f097ec0a53e5f7336a@1",
+          "kind": "constraint",
+          "text": "论文引用统一走 Zotero 导出的 BibTeX，禁止手写条目，格式不对会被组会退回。",
+          "truncated": false,
+          "source": "item-prepare",
+          "source_query": "论文 引用"
+        },
+        {
+          "citation": "atomic-memory/art_4c80aadea04f4b41a855b96f4b8487ca@1",
+          "kind": "constraint",
+          "text": "显存上限24G，batch<=8；超过上限的实验必须重跑，实验记录里写清楚 batch 和 seed。",
+          "truncated": false,
+          "source": "section-prepare",
+          "source_query": "显存 上限"
+        }
+      ]
+    },
+    {
+      "kind": "next-step",
+      "title": "下周计划",
+      "prepare": {
+        "status": "ready",
+        "content_bytes": 1180,
+        "latency_ms": 42.5,
+        "query": "下周 计划",
+        "items": 3
+      },
+      "items": [
+        {
+          "citation": "atomic-memory/art_97ef6222cd91460abd8acd5787d232e2@1",
+          "kind": "next-step",
+          "text": "下周计划复现基线论文的消融实验，先补齐 batch=4 的两组结果。",
+          "truncated": false,
+          "source": "section-prepare",
+          "source_query": "下周 计划"
+        },
+        {
+          "citation": "atomic-memory/art_bbb354576c8747808b00d137ae544173@1",
+          "kind": "next-step",
+          "text": "下周把梯度检查点的开关做成命令行参数，方便组会现场对比显存曲线。",
+          "truncated": false,
+          "source": "section-prepare",
+          "source_query": "下周 计划"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "active_memories": 10,
+    "scope_reused": false,
+    "seeded": true,
+    "sections": 4,
+    "items": 10,
+    "missing_bodies": 0,
+    "prepare_calls": 8,
+    "latency_ms": 1101.23,
+    "unknown_kinds": []
+  },
+  "trace": [
+    {
+      "ts": "2026-10-26T13:46:57.040+08:00",
+      "step": "list",
+      "path": "/v1/atomic-memory/list",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 0,
+      "content_bytes": null,
+      "latency_ms": 7.99,
+      "artifact_ids": []
+    },
+    {
+      "ts": "2026-10-26T13:46:57.449+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 408.11,
+      "artifact_ids": [
+        "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.474+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 24.42,
+      "artifact_ids": [
+        "atomic-memory/art_b190d19d453940d1af435e148fb4ab70@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.498+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 24.47,
+      "artifact_ids": [
+        "atomic-memory/art_2c1ace65c270405b9a16a46797d12d68@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.524+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 25.08,
+      "artifact_ids": [
+        "atomic-memory/art_4c80aadea04f4b41a855b96f4b8487ca@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.550+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 25.46,
+      "artifact_ids": [
+        "atomic-memory/art_45caf57b5f3944f097ec0a53e5f7336a@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.585+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 34.61,
+      "artifact_ids": [
+        "atomic-memory/art_2fe6db7d9b5545fd9721eca50a25523c@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.609+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 24.59,
+      "artifact_ids": [
+        "atomic-memory/art_43e043c282be4c35939402c475e690e9@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.636+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 25.22,
+      "artifact_ids": [
+        "atomic-memory/art_4e074006114e487f95a1703ef146a22a@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.663+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 27.24,
+      "artifact_ids": [
+        "atomic-memory/art_97ef6222cd91460abd8acd5787d232e2@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.692+08:00",
+      "step": "remember",
+      "path": "/v1/memory/remember",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": null,
+      "latency_ms": 28.41,
+      "artifact_ids": [
+        "atomic-memory/art_bbb354576c8747808b00d137ae544173@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:57.728+08:00",
+      "step": "list",
+      "path": "/v1/atomic-memory/list",
+      "query": null,
+      "status": 200,
+      "hits": null,
+      "items": 10,
+      "content_bytes": null,
+      "latency_ms": 36.53,
+      "artifact_ids": [
+        "atomic-memory/art_2c1ace65c270405b9a16a46797d12d68@1",
+        "atomic-memory/art_2fe6db7d9b5545fd9721eca50a25523c@1",
+        "atomic-memory/art_43e043c282be4c35939402c475e690e9@1",
+        "atomic-memory/art_45caf57b5f3944f097ec0a53e5f7336a@1",
+        "atomic-memory/art_4c80aadea04f4b41a855b96f4b8487ca@1",
+        "atomic-memory/art_4e074006114e487f95a1703ef146a22a@1",
+        "atomic-memory/art_97ef6222cd91460abd8acd5787d232e2@1",
+        "atomic-memory/art_b190d19d453940d1af435e148fb4ab70@1",
+        "atomic-memory/art_bbb354576c8747808b00d137ae544173@1",
+        "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.145+08:00",
+      "step": "search",
+      "path": "/v1/atomic-memory/search",
+      "query": "检查点 放弃",
+      "status": 200,
+      "hits": 2,
+      "items": null,
+      "content_bytes": null,
+      "latency_ms": 17.95,
+      "artifact_ids": [
+        "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1",
+        "atomic-memory/art_bbb354576c8747808b00d137ae544173@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.197+08:00",
+      "step": "prepare",
+      "path": "/v1/context/prepare",
+      "query": "本周 完成",
+      "status": 200,
+      "hits": null,
+      "items": 2,
+      "content_bytes": 916,
+      "latency_ms": 52.03,
+      "artifact_ids": [
+        "atomic-memory/art_2fe6db7d9b5545fd9721eca50a25523c@1",
+        "atomic-memory/art_2c1ace65c270405b9a16a46797d12d68@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.244+08:00",
+      "step": "prepare-fill",
+      "path": "/v1/context/prepare",
+      "query": "整理 三篇",
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": 634,
+      "latency_ms": 44.37,
+      "artifact_ids": [
+        "atomic-memory/art_43e043c282be4c35939402c475e690e9@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.302+08:00",
+      "step": "prepare-fill",
+      "path": "/v1/context/prepare",
+      "query": "实验 日志",
+      "status": 200,
+      "hits": null,
+      "items": 3,
+      "content_bytes": 1182,
+      "latency_ms": 58.09,
+      "artifact_ids": [
+        "atomic-memory/art_4e074006114e487f95a1703ef146a22a@1",
+        "atomic-memory/art_4c80aadea04f4b41a855b96f4b8487ca@1",
+        "atomic-memory/art_97ef6222cd91460abd8acd5787d232e2@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.351+08:00",
+      "step": "prepare",
+      "path": "/v1/context/prepare",
+      "query": "决定 方案",
+      "status": 200,
+      "hits": null,
+      "items": 2,
+      "content_bytes": 941,
+      "latency_ms": 48.33,
+      "artifact_ids": [
+        "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1",
+        "atomic-memory/art_2c1ace65c270405b9a16a46797d12d68@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.392+08:00",
+      "step": "prepare-fill",
+      "path": "/v1/context/prepare",
+      "query": "确定 评测",
+      "status": 200,
+      "hits": null,
+      "items": 1,
+      "content_bytes": 653,
+      "latency_ms": 39.32,
+      "artifact_ids": [
+        "atomic-memory/art_b190d19d453940d1af435e148fb4ab70@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.447+08:00",
+      "step": "prepare",
+      "path": "/v1/context/prepare",
+      "query": "显存 上限",
+      "status": 200,
+      "hits": null,
+      "items": 4,
+      "content_bytes": 1486,
+      "latency_ms": 55.35,
+      "artifact_ids": [
+        "atomic-memory/art_4c80aadea04f4b41a855b96f4b8487ca@1",
+        "atomic-memory/art_43e043c282be4c35939402c475e690e9@1",
+        "atomic-memory/art_bbb354576c8747808b00d137ae544173@1",
+        "atomic-memory/art_e0cccb15ed0f49c0bf4ffe084b50ebeb@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.500+08:00",
+      "step": "prepare-fill",
+      "path": "/v1/context/prepare",
+      "query": "论文 引用",
+      "status": 200,
+      "hits": null,
+      "items": 4,
+      "content_bytes": 1447,
+      "latency_ms": 51.16,
+      "artifact_ids": [
+        "atomic-memory/art_45caf57b5f3944f097ec0a53e5f7336a@1",
+        "atomic-memory/art_4e074006114e487f95a1703ef146a22a@1",
+        "atomic-memory/art_97ef6222cd91460abd8acd5787d232e2@1",
+        "atomic-memory/art_43e043c282be4c35939402c475e690e9@1"
+      ]
+    },
+    {
+      "ts": "2026-10-26T13:46:58.542+08:00",
+      "step": "prepare",
+      "path": "/v1/context/prepare",
+      "query": "下周 计划",
+      "status": 200,
+      "hits": null,
+      "items": 3,
+      "content_bytes": 1180,
+      "latency_ms": 42.5,
+      "artifact_ids": [
+        "atomic-memory/art_2c1ace65c270405b9a16a46797d12d68@1",
+        "atomic-memory/art_97ef6222cd91460abd8acd5787d232e2@1",
+        "atomic-memory/art_bbb354576c8747808b00d137ae544173@1"
+      ]
+    }
+  ]
+}

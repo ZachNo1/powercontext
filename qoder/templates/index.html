@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not report %}
+<section class="card">
+  <h1>还没有周报</h1>
+  <p class="empty">请先运行 <code>python app.py</code>：它会启动 PowerContext、生成周报并打开本页。</p>
+</section>
+{% else %}
+{% set focus = report.focus %}
+<section class="hero">
+  <h1>{{ report.scope.title }}</h1>
+  <p class="sub">{{ report.scope.summary }}</p>
+  <div class="meta">
+    <span>生成于 {{ report.generated_at }}</span>
+    <span>scope <code>{{ report.scope.scope_id }}</code></span>
+    <span>PowerContext 1.4.0 · {{ report.powercontext.base_url }}</span>
+    <span>本地 SQLite · 无 API Key</span>
+  </div>
+  <a class="btn" href="/evidence">查看证据链：这条周报是怎么拼出来的</a>
+</section>
+
+<section class="stats">
+  <div><b>{{ report.totals.active_memories }}</b><span>条 active 记忆</span></div>
+  <div><b>{{ report.totals.sections }}</b><span>个固定段落</span></div>
+  <div><b>{{ report.totals["items"] }}</b><span>条正文</span></div>
+  <div><b>{{ report.totals.prepare_calls }}</b><span>次 prepare 调用</span></div>
+  <div><b>{{ report.totals.latency_ms }}</b><span>毫秒累计延迟</span></div>
+</section>
+
+{% if focus %}
+<section class="card">
+  <h2>本期焦点</h2>
+  <p class="topic">{{ focus.topic }}</p>
+  <p class="hint">
+    检索词：<code>{{ focus.query }}</code>
+    （问题被压缩成 {{ focus.query.split()|length }} 个关键词后调用 /v1/atomic-memory/search，命中 {{ focus.hits|length }} 条）
+  </p>
+  <ul class="hits">
+    {% for hit in focus.hits %}
+    <li>
+      <span class="kind {{ hit.kind }}">{{ kind_zh.get(hit.kind, hit.kind) }}</span>
+      <p>{{ hit.text }}</p>
+      <div class="ref">
+        <code>{{ hit.citation }}</code>
+        {% if hit.reused %}<span class="badge">同一 artifact 多处引用</span>{% endif %}
+        <span class="score">RRF {{ '%.4f'|format(hit.score) }}（检索排序分，不是相关度）</span>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% set ns = namespace(any_reused=false) %}
+  {% for hit in focus.hits %}{% if hit.reused %}{% set ns.any_reused = true %}{% endif %}{% endfor %}
+  {% if ns.any_reused %}
+  <p class="note">
+    “同一 artifact 多处引用”是正常现象：焦点由 search 定位、正文由 prepare 召回，两处引用的是同一条记忆，不是重复数据。
+  </p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% for section in report.sections %}
+<section class="card">
+  <div class="head">
+    <h2>{{ section.title }}</h2>
+    <span class="kind {{ section.kind }}">{{ kind_zh.get(section.kind, section.kind) }}</span>
+    <span class="prep">
+      prepare <code>{{ section.prepare.query }}</code> ·
+      {{ section.prepare.status }} ·
+      {{ section.prepare.content_bytes }} B ·
+      {{ section.prepare.latency_ms }} ms ·
+      召回 {{ section.prepare["items"] }} 条
+    </span>
+  </div>
+  <ol class="items">
+    {% for item in section["items"] %}
+    <li>
+      <p>{{ item.text if item.text else '（该条正文未取到）' }}</p>
+      {% if item.truncated %}<span class="warn">正文被 max_bytes 截断</span>{% endif %}
+      <div class="ref">
+        {% if item.citation %}<code>{{ item.citation }}</code>{% else %}<span class="warn">无 citation</span>{% endif %}
+        <span class="badge src">{{ item.source }}</span>
+        <span class="q">query <code>{{ item.source_query }}</code></span>
+        {% if item.reused %}<span class="badge">同一 artifact 多处引用</span>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endfor %}
+
+<section class="card">
+  <h2>字段说明</h2>
+  <p class="note" style="margin-top:0">
+    <span class="badge src">section-prepare</span>
+    表示该条正文由本段的固定关键词 prepare 一次召回；
+    <span class="badge src">item-prepare</span>
+    表示段级召回未覆盖该条，再按其正文前 2 个中文实词单独 prepare 一次。
+    两种来源的正文与 citation 都直接取自 prepare 响应。
+  </p>
+</section>
+{% endif %}
+{% endblock %}

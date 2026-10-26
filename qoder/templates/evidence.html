@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}证据链 · 实验室周报助手{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>证据链：每一次对 PowerContext 的调用</h1>
+  <p class="sub">
+    evidence/events.jsonl 与 out/weekly_report.json 由同一次运行产生；
+    每次生成周报前 events.jsonl 会清空重写，因此本页逐行对应页面上的那条周报。
+  </p>
+  <div class="meta">
+    <span><a href="/" style="color:var(--accent)">返回周报</a></span>
+    {% if report %}<span>周报生成于 {{ report.generated_at }}</span>{% endif %}
+  </div>
+</section>
+
+<section class="card verdict">
+  <h2>去掉 PowerContext，这条周报还能生成出来吗？</h2>
+  <p class="answer">不能。</p>
+  <ul>
+    <li>
+      页面上的 {{ stats["items"] }} 条正文里，{{ stats.items_with_citation }} 条带 citation，缺失正文 {{ stats.missing_bodies }} 条；
+      模板没有任何硬编码的记忆文本。
+    </li>
+    <li>
+      段落骨架来自 <code>/v1/atomic-memory/list</code> 的一次调用，返回 {{ stats.memories }} 条 active 记忆（见下表第 1 行）。
+    </li>
+    <li>
+      本期焦点来自 <code>/v1/atomic-memory/search</code> 的一次调用，检索词为
+      <code>{{ stats.focus_query or '（未指定主题）' }}</code>，命中 {{ stats.focus_hits }} 条。
+    </li>
+    <li>
+      所有正文与 citation 只来自 <code>/v1/context/prepare</code> 的 {{ stats.prepare_calls }} 次调用，累计 {{ stats.prepare_latency_ms }} ms；
+      没有这些响应，{{ stats["items"] }} 条正文和对应引用都无法生成。
+    </li>
+    <li>
+      全部 {{ stats.calls }} 次调用累计 {{ stats.total_latency_ms }} ms，逐条列在下方。
+    </li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>PowerContext 运行信息</h2>
+  <dl class="kv">
+    <dt>server.json 端口</dt><dd><code>{{ server.port or '—' }}</code></dd>
+    <dt>base_url</dt><dd><code>{{ server.base_url or '—' }}</code></dd>
+    <dt>本次是否复用</dt><dd>{{ '是（复用已运行的实例）' if server.reused else '否（本次新启动）' }}</dd>
+    <dt>启动 / 探测耗时</dt><dd>{{ server.startup_ms if server.startup_ms is not none else '—' }} ms</dd>
+    <dt>运行状态</dt><dd>{{ '运行中' if server.running else '已停止' }}（记录于 {{ server.updated_at or '—' }}）</dd>
+    <dt>数据目录</dt><dd><code>{{ home }}</code></dd>
+    <dt>数据库</dt><dd><code>{{ home }}\powercontext.db</code></dd>
+    <dt>进程 PID</dt><dd><code>{{ server.pid or '—' }}</code></dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>调用明细（{{ events|length }} 行）</h2>
+  {% if not events %}
+  <p class="warn">events.jsonl 为空：请用 <code>python app.py</code> 重新生成周报。</p>
+  {% else %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ts</th>
+          <th>step</th>
+          <th>path</th>
+          <th>query</th>
+          <th>status</th>
+          <th>hits</th>
+          <th>items</th>
+          <th>content_bytes</th>
+          <th>latency_ms</th>
+          <th>artifact_ids</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td title="{{ event.ts }}">{{ event.ts[11:23] }}</td>
+          <td><span class="step">{{ event.step }}</span></td>
+          <td class="path"><code>{{ event.path }}</code></td>
+          <td class="q">{{ event.query or '—' }}</td>
+          <td>{{ event.status }}</td>
+          <td>{{ event.hits if event.hits is not none else '—' }}</td>
+          <td>{{ event["items"] if event["items"] is not none else '—' }}</td>
+          <td>{{ event.content_bytes if event.content_bytes is not none else '—' }}</td>
+          <td>{{ event.latency_ms }}</td>
+          <td class="ids">
+            {% for artifact in event.artifact_ids %}
+            {% set ref = artifact.split('/')[-1].split('@') %}
+            <code title="{{ artifact }}">{{ ref[0][:10] }}…{{ ref[0][-4:] }}@{{ ref[1] }}</code>
+            {% else %}
+            <span class="muted">—</span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    同一 artifact 在多次调用中重复出现属正常：list 全量返回全部记忆，prepare 会按不同 query 多次召回同一条记忆；
+    周报页面只按 artifact 引用一次，并标注“同一 artifact 多处引用”。
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

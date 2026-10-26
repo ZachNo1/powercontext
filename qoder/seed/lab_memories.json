@@ -1,0 +1,57 @@
+{
+  "title": "实验室周报助手",
+  "summary": "组会周报的长期上下文：本周进展、关键决定、风险约束与下周计划",
+  "idempotency_key": "lab-weekly-report-demo-v1",
+  "memories": [
+    {
+      "kind": "decision",
+      "text": "决定放弃方案B，改用梯度检查点：全量激活缓存放不下，梯度检查点把峰值显存压到18G。",
+      "reason": "组会确认的模型方案调整"
+    },
+    {
+      "kind": "decision",
+      "text": "确定评测基线使用 RAGAS 的三项指标，周会前不再更换评测集，避免历史结果不可比。",
+      "reason": "组会确认的评测口径"
+    },
+    {
+      "kind": "decision",
+      "text": "组会决议：周报固定四段结构——本周进展、关键决定、风险待办、下周计划。",
+      "reason": "组会确认的周报格式"
+    },
+    {
+      "kind": "constraint",
+      "text": "显存上限24G，batch<=8；超过上限的实验必须重跑，实验记录里写清楚 batch 和 seed。",
+      "reason": "机器规格限制"
+    },
+    {
+      "kind": "constraint",
+      "text": "论文引用统一走 Zotero 导出的 BibTeX，禁止手写条目，格式不对会被组会退回。",
+      "reason": "写作规范约束"
+    },
+    {
+      "kind": "progress",
+      "text": "本周完成RAG评估脚本，跑通120条问答样本，检索命中率从61%提升到78%。",
+      "reason": "本周实际产出"
+    },
+    {
+      "kind": "progress",
+      "text": "整理了三篇长上下文论文的对比表，补充了显存占用和推理延迟两列。",
+      "reason": "本周实际产出"
+    },
+    {
+      "kind": "progress",
+      "text": "把实验日志迁移到 evidence 目录，每次运行自动记录 query 和 artifact 引用。",
+      "reason": "本周实际产出"
+    },
+    {
+      "kind": "next-step",
+      "text": "下周计划复现基线论文的消融实验，先补齐 batch=4 的两组结果。",
+      "reason": "下周待办"
+    },
+    {
+      "kind": "next-step",
+      "text": "下周把梯度检查点的开关做成命令行参数，方便组会现场对比显存曲线。",
+      "reason": "下周待办"
+    }
+  ]
+}
