@@ -1,5 +1,9 @@
 # Qoder 开发记录（索引）
 
+- 参赛作品：实验周报助手（Lab Weekly Report Assistant）
+- 分支：`2026-competition-ecosystem`，项目目录 `qoder/`
+- Qoder UID：`01a17234-95ea-7781-894a-7d80639b0de2`
+
 本文件是"Qoder 开发记录"的索引：开发过程在 Qoder 会话中完成，截图放在 `docs/screenshots/`。
 
 | 文件 | 对应做了什么 | 画面内容 |
@@ -9,6 +13,6 @@
 
 补充说明：
 
-- 两张截图只用于证明开发过程在 Qoder 中完成，不包含账号邮箱、UID、API Key 等信息。
+- 截图本身不含账号邮箱、UID 或 API Key；UID 只以文字形式记录在本页顶部。
 - 仓库内可核对的产物：提交记录、`README.md`、`samples/screenshots/` 下的首页与证据页截图、线上作品页。
 - 复现方式：在 `qoder/` 目录按 `README.md` 的「快速开始」安装并运行 `app.py`，即可得到与截图相同的首页和 `/evidence` 页面。
