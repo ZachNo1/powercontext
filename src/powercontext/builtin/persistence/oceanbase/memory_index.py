@@ -16,8 +16,6 @@
 
 from __future__ import annotations
 
-import os
-
 from pyobvector import VECTOR, VectorIndex
 from sqlalchemy import (
     BigInteger,
@@ -490,10 +488,6 @@ class OceanBaseMemoryVectorIndex:
         )
         fts_rows = [row for row in rows if str(row["channel"]) == "fts"]
         vector_rows = [row for row in rows if str(row["channel"]) == "vector"]
-        if os.environ.get("PC_DEBUG_HYBRID"):
-            print("HYBRID total rows:", len(rows))
-            for row in rows:
-                print("  ", dict(row))
         return MemorySearchChannels(
             fts=memory_channel_hits(fts_rows, request.memories),
             vector=memory_channel_hits(vector_rows, request.memories),
