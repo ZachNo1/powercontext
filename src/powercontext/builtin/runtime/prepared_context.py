@@ -459,7 +459,16 @@ class PreparedContextBuilder:
                     selected.append(index)
                     chosen.add(index)
 
-        return tuple(_fragment(candidates[index]) for index in selected)
+        # Merging contiguous spans releases bytes the earlier passes could not use,
+        # so spend the remainder on further query-relevant sentences.
+        for index in ranked:
+            if index in chosen:
+                continue
+            if _fragments_fit(candidates, (*selected, index), max_bytes):
+                selected.append(index)
+                chosen.add(index)
+
+        return _merge_selected(candidates, selected)
 
     def _select_entries(
         self,
@@ -870,6 +879,7 @@ class _FragmentCandidate:
     end: int
     text: str
     tokens: frozenset[str]
+    entry_text: str = ""
 
 
 def _fragment_tokens(text: str) -> frozenset[str]:
@@ -938,6 +948,7 @@ def _fragment_candidates(
                             end=span_end,
                             text=text,
                             tokens=_fragment_tokens(text),
+                            entry_text=hit.text,
                         )
                     )
     return tuple(candidates)
@@ -1018,12 +1029,53 @@ def _render_fragments(fragments: Sequence[MemoryFragment]) -> str:
     return "\n\n".join((TRUST_POLICY, f"{_BEGIN_MARKER}\n{encoded}\n{_END_MARKER}"))
 
 
+def _merge_selected(
+    candidates: Sequence[_FragmentCandidate],
+    indexes: Sequence[int],
+) -> tuple[MemoryFragment, ...]:
+    """Coalesce contiguous selected spans so one citation carries the whole passage.
+
+    Every emitted item repeats its full citation, and a citation costs roughly as
+    much as a short sentence. Splitting one passage across several fragments spends
+    the byte budget on identity instead of on evidence, so touching spans of the
+    same entry are merged back into a single literal slice.
+    """
+
+    grouped: dict[tuple[str, str, str], list[int]] = {}
+    order: list[tuple[str, str, str]] = []
+    for index in indexes:
+        key = _address_key(candidates[index].address)
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(index)
+
+    fragments: list[MemoryFragment] = []
+    for key in order:
+        spans = sorted(grouped[key], key=lambda index: candidates[index].start)
+        first = candidates[spans[0]]
+        start, end = first.start, first.end
+        for index in spans[1:]:
+            candidate = candidates[index]
+            if candidate.start <= end:
+                end = max(end, candidate.end)
+                continue
+            fragments.append(
+                MemoryFragment(address=first.address, start=start, end=end, text=first.entry_text[start:end])
+            )
+            start, end = candidate.start, candidate.end
+        fragments.append(
+            MemoryFragment(address=first.address, start=start, end=end, text=first.entry_text[start:end])
+        )
+    return tuple(fragments)
+
+
 def _fragments_fit(
     candidates: Sequence[_FragmentCandidate],
     indexes: Sequence[int],
     max_bytes: int,
 ) -> bool:
-    rendered = _render_fragments(tuple(_fragment(candidates[index]) for index in indexes))
+    rendered = _render_fragments(_merge_selected(candidates, indexes))
     return len(rendered.encode("utf-8")) <= max_bytes
 
 
