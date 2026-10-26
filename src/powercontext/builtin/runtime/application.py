@@ -878,17 +878,15 @@ class ScopedContextApplication:
         """
 
         from powercontext.builtin.runtime.context_pack import (
-            INCREMENTAL_CONTEXT_CHUNK_BYTES,
             ContextPack,
             ContextPackDelta,
             ContextPackError,
         )
 
         prepared = await self.prepare(request)
-        target = ContextPack.from_content(
-            prepared.content or "",
-            chunk_bytes=INCREMENTAL_CONTEXT_CHUNK_BYTES,
-        )
+        # Use the documented default chunking so a receiver that rebuilds the
+        # target with ContextPack.from_content(content) gets the same pack.
+        target = ContextPack.from_content(prepared.content or "")
         if base_pack is None:
             return target
         if not isinstance(base_pack, ContextPack):

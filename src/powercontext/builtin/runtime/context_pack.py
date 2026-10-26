@@ -78,7 +78,9 @@ class ContextPack:
             raise ContextPackError("context pack digest must be a string")  # noqa: TRY003
         if digest != _pack_digest(items):
             raise ContextPackError("context pack digest does not match its items")  # noqa: TRY003
-        if payload["byte_count"] != len(bytes(raw)):
+        # byte_count measures the canonical encoding, so accept a semantically
+        # identical payload that was re-serialised without canonical spacing.
+        if payload["byte_count"] != len(_encode_pack(items, digest)):
             raise ContextPackError("context pack byte_count does not match the payload")  # noqa: TRY003
         return cls(items=items, digest=digest)
 
