@@ -111,7 +111,7 @@ async def search_pdf_pages(memory, question: str, limit: int = 10) -> tuple[obje
             if current is None or (covered, -position) > (current[0], -current[1]):
                 ranked[location] = (covered, position, citation)
 
-    ordered = sorted(ranked.values(), key=lambda item: (-item[0], item[1]))
+    ordered = sorted(ranked.values(), key=lambda item: item[1])
     return tuple(item[2] for item in ordered[:limit])
 
 
