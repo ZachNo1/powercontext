@@ -850,11 +850,13 @@ class ScopedContextApplication:
     async def prepare_incremental(
         self,
         request: PrepareContextRequest,
-        /,
-        *,
         base_pack: Any = None,
     ) -> Any:
-        """Send a full Context Pack first, then only the delta against it."""
+        """Send a full Context Pack first, then only the delta against it.
+
+        ``base_pack`` is accepted positionally or by keyword because the public
+        contract declares it as ``prepare_incremental(request, base_pack=None)``.
+        """
 
         from powercontext.builtin.runtime.context_pack import (
             INCREMENTAL_CONTEXT_CHUNK_BYTES,
