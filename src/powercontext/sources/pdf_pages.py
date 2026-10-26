@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from urllib.parse import quote, unquote
 
 from pydantic import BaseModel, Field
@@ -36,6 +37,82 @@ PDF_IDENTITY_PARTS = 4
 
 _SEARCH_CANDIDATE_MULTIPLIER = 12
 _SEARCH_CANDIDATE_FLOOR = 120
+_SEARCH_CANDIDATE_CEILING = 400
+_KEYWORD_LIMIT = 6
+_STOPWORDS = frozenset(
+    """
+    a an and are as at be been being both by can could did do does for from had has have how
+    if in into is it its may might must not of on or our shall should so than that the their
+    them then there these they this those to was we were what when where which who whom why
+    will with would you your
+    """.split()
+)
+_WORD_PATTERN = re.compile(r"[a-z]+|\d+")
+
+
+def _query_terms(text: str) -> tuple[str, ...]:
+    lowered = text.lower()
+    seen: list[str] = []
+    for token in _WORD_PATTERN.findall(lowered):
+        if token in _STOPWORDS or len(token) < 2:
+            continue
+        if token not in seen:
+            seen.append(token)
+    return tuple(seen)
+
+
+async def search_pdf_pages(memory, question: str, limit: int = 10) -> tuple[object, ...]:
+    """Return up to ``limit`` citations that each point at a distinct page.
+
+    Long natural-language questions rank poorly under a single lexical query,
+    so the search runs the question and a keyword probe, then re-ranks the
+    merged candidate pool by how much of the question each page covers.
+    """
+
+    if not isinstance(question, str) or not question.strip():
+        raise ValueError("question must be a non-blank string")  # noqa: TRY003
+    if type(limit) is not int or limit < 1:
+        raise ValueError("limit must be a positive integer")  # noqa: TRY003
+
+    from powercontext.builtin.artifacts.memory.models import MemoryCitation
+    from powercontext.builtin.runtime import GetMemoryEntryRequest, SearchMemoryRequest
+
+    terms = _query_terms(question)
+    candidates = min(
+        max(limit * _SEARCH_CANDIDATE_MULTIPLIER, _SEARCH_CANDIDATE_FLOOR),
+        _SEARCH_CANDIDATE_CEILING,
+    )
+    probes = [question]
+    if terms:
+        probes.append(" ".join(terms[:_KEYWORD_LIMIT]))
+
+    ranked: dict[tuple[str, int], tuple[int, int, object]] = {}
+    for probe_index, probe in enumerate(probes):
+        page = await memory.search(SearchMemoryRequest(query=probe, mode="fts", limit=candidates))
+        for hit_index, hit in enumerate(page.hits):
+            citation = MemoryCitation(
+                memory_ref=hit.memory_ref,
+                entry_id=hit.entry_id,
+                entry_version_id=hit.entry_version_id,
+            )
+            entry = (await memory.get(GetMemoryEntryRequest(citation=citation))).entry
+            location = None
+            for reference in entry.sources:
+                location = _location_of(reference.source_id)
+                if location is not None:
+                    break
+            if location is None:
+                continue
+            covered = sum(1 for term in terms if term in hit.text.lower())
+            # Keep the earliest lexical position as the tiebreaker so the
+            # original ranking still decides pages that cover the same terms.
+            position = probe_index * candidates + hit_index
+            current = ranked.get(location)
+            if current is None or (covered, -position) > (current[0], -current[1]):
+                ranked[location] = (covered, position, citation)
+
+    ordered = sorted(ranked.values(), key=lambda item: (-item[0], item[1]))
+    return tuple(item[2] for item in ordered[:limit])
 
 
 class PDFDocumentInput(BaseModel):
@@ -110,41 +187,6 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
     if not pages:
         raise ValueError("pdf content must contain at least one page")  # noqa: TRY003
     return pages
-
-
-async def search_pdf_pages(memory, question: str, limit: int = 10) -> tuple[object, ...]:
-    """Return up to ``limit`` citations that each point at a distinct page."""
-
-    if not isinstance(question, str) or not question.strip():
-        raise ValueError("question must be a non-blank string")  # noqa: TRY003
-    if type(limit) is not int or limit < 1:
-        raise ValueError("limit must be a positive integer")  # noqa: TRY003
-
-    from powercontext.builtin.artifacts.memory.models import MemoryCitation
-    from powercontext.builtin.runtime import GetMemoryEntryRequest, SearchMemoryRequest
-
-    candidates = max(limit * _SEARCH_CANDIDATE_MULTIPLIER, _SEARCH_CANDIDATE_FLOOR)
-    page = await memory.search(SearchMemoryRequest(query=question, mode="fts", limit=candidates))
-
-    seen: set[tuple[str, int]] = set()
-    citations: list[object] = []
-    for hit in page.hits:
-        citation = MemoryCitation(
-            memory_ref=hit.memory_ref,
-            entry_id=hit.entry_id,
-            entry_version_id=hit.entry_version_id,
-        )
-        entry = (await memory.get(GetMemoryEntryRequest(citation=citation))).entry
-        for reference in entry.sources:
-            location = _location_of(reference.source_id)
-            if location is None or location in seen:
-                continue
-            seen.add(location)
-            citations.append(citation)
-            break
-        if len(citations) >= limit:
-            break
-    return tuple(citations)
 
 
 def _page_text(page: object) -> str:
