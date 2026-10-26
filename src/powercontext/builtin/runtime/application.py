@@ -248,6 +248,10 @@ from powercontext.builtin.runtime.recall_sufficiency import (
     build_recall_candidates,
     recall_effort,
 )
+from powercontext.builtin.runtime.source_lifecycle import (
+    SourceLifecycleApplication,
+    unavailable_topic_artifacts,
+)
 from powercontext.builtin.runtime.statistics import RelationalScopedStatistics, overview_selection
 from powercontext.builtin.scope import ScopeApplication, ScopeDescriptor, ScopeSelection
 from powercontext.builtin.scope.subject_sources import SubjectSourceService
@@ -2711,6 +2715,13 @@ class ScopedTopicMemoryApplication:
                     query_embedding,
                     embedding_timeout_seconds,
                 )
+        unsupported = await unavailable_topic_artifacts(self._runtime, self.scope_id)
+        if unsupported:
+            # A Topic with no surviving support leaves native search and prepared context together,
+            # because both read hits through this one method.
+            result = result.model_copy(
+                update={"hits": tuple(hit for hit in result.hits if hit.artifact_ref.artifact_id not in unsupported)}
+            )
         observer = self._runtime._topic_memory_search_observer
         if observer is not None:
             try:
@@ -3165,6 +3176,7 @@ class BuiltinRuntime:
         self.memory = MemoryApplication(self)
         self.topic_memory = TopicMemoryApplication(self)
         self.records = RecordApplication(self)
+        self.lifecycle = SourceLifecycleApplication(self)
         self.prompts = PromptApplication(self)
         self.review = ReviewApplication(self)
         self.skill = SkillApplication(self)
